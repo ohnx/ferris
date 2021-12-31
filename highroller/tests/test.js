@@ -1,15 +1,9 @@
 // the test object we will attempt to turn into SystemVerilog
 const TEST_OBJ = {
-  version: 1,
+  version: 2,
   machine: {
     nodes: [
-      {
-        // all nodes have an id and a name and that's it
-        id: 0,
-        // special case node 0 MUST BE called [RESET] to indicate where the
-        // fsm starts upon reset
-        name: "[RESET]"
-      },
+      // all nodes have an id and a name and that's it
       {id: 1, name: "WAIT_READ"},
       {id: 2, name: "WAIT_WRITE"},
       {id: 3, name: "WRITE_DELAY"},
@@ -20,13 +14,7 @@ const TEST_OBJ = {
       // id's don't have to be sequential
     ],
     edges: [
-      {
-        // all edges describe a start, end, condition, and output
-        start: 0,
-        end: 1,
-        condition: "[RESET]",
-        output: []
-      },
+      // all edges describe a start, end, condition, and output
       // TODO: fsm's look nicer with ~ instead of !, can we use that instead?
       {start: 1, end: 1, condition: "fifo_empty", output: ["buf_en"]},
       {start: 1, end: 2, condition: "!fifo_empty", output: ["buf_en", "fifo_read"]},
@@ -43,6 +31,8 @@ const TEST_OBJ = {
   // additional metadata needed to build a proper representation
   meta: {
     name: "NFTB_fsm",
+    // reset state
+    reset: 1,
     signals: {
       // signals (input/output) 
       input: [
@@ -106,4 +96,5 @@ const TEST_OPTIONS = {
 
 const highroller = require('../src/index.js');
 
+console.log(JSON.stringify(TEST_OBJ, null, 2));
 console.log(highroller.convert(TEST_OBJ, TEST_OPTIONS));

@@ -6,6 +6,9 @@ const LogLevel = {
   FATAL: 5    // something terrible in user input, no output possible
 };
 
+// TODO: big issue: inverted signals should be able to be input
+// this goes into a larger question of how to handle inverted signals nicely
+
 // function to make a nicer representation of the fsm
 // nicer = nodes and edges are mixed
 // takes in opts only for the logger
@@ -46,40 +49,29 @@ let make_nicer_fsm = function(fsm, opts) {
     nodeMap[currEdge.end].targets += 1;
   }
 
-  // check that RESET node exists and has ID 0
-  if ((!nodeMap.hasOwnProperty(0)) || (nodeMap[0].name != "[RESET]")) {
-    opts.logger(LogLevel.FATAL, `Missing [RESET] state with ID 0 in input`);
-    return;
-  }
-
   // convert back to an array
   var nodeArr = Object.values(nodeMap);
-  // ensure that node 0 is at the start
-  nodeArr.sort((a, b) => {return a.id - b.id;});
 
   // check that there are no floating nodes
-  for (i = 1; i < nodeArr.length; i++) {
+  for (i = 0; i < nodeArr.length; i++) {
     if (nodeArr[i].targets == 0) {
       opts.logger(LogLevel.WARNING, `Node ID ${nodeArr[i].id} has no edges going to it`);
     }
   }
 
-  // check that the reset state only goes to one node
-  if (nodeArr[0].edges.length > 1) {
-    opts.logger(LogLevel.ERROR, `Multiple nodes are marked as being the reset state!`);
-  } else if (nodeArr[0].edges.length == 0) {
-    opts.logger(LogLevel.FATAL, `Missing reset edge/state!`);
+  // check that we have a node with the id to start at
+  if (!fsm.meta.hasOwnProperty('reset')) {
+    opts.logger(LogLevel.FATAL, `No reset state specified!`);
     return;
   }
-
-  // check that the reset edge has no conditions
-  if (nodeArr[0].edges[0].output.length > 0) {
-    opts.logger(LogLevel.WARNING, `Reset edge/state should not specify any outputs!`);
+  if (!nodeMap.hasOwnProperty(fsm.meta.reset)) {
+    opts.logger(LogLevel.FATAL, `Invalid reset state ID #${fsm.meta.reset} specified!`);
+    return;
   }
 
   // check that we don't have overlapping conditions
   // TODO: use some sort of SAT solver to check for full coverage
-  for (i = 1; i < nodeArr.length; i++) {
+  for (i = 0; i < nodeArr.length; i++) {
     var transitionConditions = nodeArr[i].edges.map(x => x.condition);
     var numUnconditionalTransitions = transitionConditions.reduce((prev, curr) => {prev + (curr ? 1 : 0)}, 0);
     if (numUnconditionalTransitions > 1) {
@@ -87,7 +79,7 @@ let make_nicer_fsm = function(fsm, opts) {
     }
   }
 
-  return nodeArr;
+  return nodeMap;
 };
 
 // function to get 
@@ -130,7 +122,7 @@ let make_nicer_signals = function(fsm, opts) {
         checkStr = checkStr[0];
       } else {
         // error
-        opts.logger(LogLevel.ERROR, `Bad transition condition \`${fsm.machine.edges[i].output[j]}\` in edge #${i} output #${j}`);
+        opts.logger(LogLevel.ERROR, `Bad output \`${fsm.machine.edges[i].output[j]}\` in edge #${i} output #${j}`);
         return;
       }
 
@@ -152,8 +144,8 @@ exports.convert = function(fsm, opts) {
   let niceFsm;
   let niceSignals;
 
-  if (fsm.version != 1) {
-    opts.logger(LogLevel.FATAL, `Expected version 1, not ${fsm.version}`);
+  if (fsm.version != 2) {
+    opts.logger(LogLevel.FATAL, `Expected version 2, not ${fsm.version}`);
     return;
   }
 
@@ -228,10 +220,10 @@ exports.convert = function(fsm, opts) {
 
   let gen_enum = function() {
     var i = 0;
-    let enumWidth = Math.ceil(Math.log2(niceFsm.length - 1));
+    let enumWidth = Math.ceil(Math.log2(fsm.machine.nodes.length));
     emit_line(1, `enum logic [${enumWidth - 1}:0] {`);
-    for (i = 1; i < niceFsm.length; i++) {
-      emit_line(0, `${niceFsm[i].name}${i == (niceFsm.length - 1) ? `` : `,`}`);
+    for (i = 0; i < fsm.machine.nodes.length; i++) {
+      emit_line(0, `${fsm.machine.nodes[i].name}${i == (fsm.machine.nodes.length - 1) ? `` : `,`}`);
     }
     emit_line(-1, `} ${opts.cstate}, ${opts.nstate};`);
   };
@@ -252,7 +244,8 @@ exports.convert = function(fsm, opts) {
 
   let format_single_output = function(outputSignal, value) {
     if (value) {
-      emit_line(0, `${outputSignal} = ${niceSignals[outputSignal].width}'d${value};`);
+      let val_str = isNaN(parseInt(value)) ? value : `${niceSignals[outputSignal].width}'d${value}`;
+      emit_line(0, `${outputSignal} = ${val_str};`);
     } else {
       emit_line(0, `${outputSignal} = ${niceSignals[outputSignal].asserted};`);
     }
@@ -296,8 +289,8 @@ exports.convert = function(fsm, opts) {
   let gen_case = function() {
     emit_line(1, `case (${opts.cstate})`);
 
-    for (var i = 1; i < niceFsm.length; i++) {
-      gen_case_item(niceFsm[i]);
+    for (var i = 0; i < fsm.machine.nodes.length; i++) {
+      gen_case_item(fsm.machine.nodes[i]);
     }
 
     emit_line(-1, `endcase`);
@@ -336,7 +329,7 @@ exports.convert = function(fsm, opts) {
 
   // gen ff logic
   // figure out name of reset state
-  gen_ff(niceFsm[niceFsm[0].edges[0].end].name);
+  gen_ff(niceFsm[fsm.meta.reset].name);
 
   // gen module header/footer if we're file or module
   if (opts.outputType != "code") gen_module_footer();
