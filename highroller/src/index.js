@@ -82,8 +82,6 @@ let make_nicer_fsm = function(fsm, opts) {
   return nodeMap;
 };
 
-// function to get 
-
 // function to make a nicer representation of the signals
 // mostly turns the array of output signals into a map
 // also does some validation

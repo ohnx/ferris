@@ -1,0 +1,1 @@
+window.highroller = require('highroller');
