@@ -1,0 +1,3 @@
+[submodule "riesenrad"]
+	path = riesenrad
+	url = https://github.com/ohnx/riesenrad.git
