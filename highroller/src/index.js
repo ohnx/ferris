@@ -245,7 +245,11 @@ exports.convert = function(fsm, opts) {
       let val_str = isNaN(parseInt(value)) ? value : `${niceSignals[outputSignal].width}'d${value}`;
       emit_line(0, `${outputSignal} = ${val_str};`);
     } else {
-      emit_line(0, `${outputSignal} = ${niceSignals[outputSignal].asserted};`);
+      if (niceSignals.hasOwnProperty(outputSignal))
+        emit_line(0, `${outputSignal} = ${niceSignals[outputSignal].asserted};`);
+      else {
+        opts.logger(LogLevel.ERROR, `Unknown signal name ${outputSignal}`);
+      }
     }
   };
 

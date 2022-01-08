@@ -1,0 +1,159 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    font-family: 'Helvetica Neue', 'Segoe UI', sans-serif;
+    overflow: hidden;
+}
+
+#canvas {
+    display: block;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.sidebar {
+    display: none;
+    opacity: 0;
+    position: absolute;
+    right: 0;
+    height: 100%;
+    width: 0;
+    box-sizing: border-box;
+    overflow: auto;
+    background: #ddd;
+}
+
+.sidebar-open {
+    display: block;
+    opacity: 1;
+    width: 25%;
+}
+
+.menubar-dummy {
+    padding: 0.5em;
+}
+
+.sidebar-content {
+    padding: 3em 1em 1em 1em;
+    background: #ddd;
+    min-height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+#menubar {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #eee;
+    padding: 0 0.5em;
+    margin: 0;
+    list-style-type: none;
+    box-sizing: border-box;
+    z-index: 100;
+}
+
+#menubar input, #menubar input:focus {
+    background: rgba(0, 0, 0, 0);
+    border: 0;
+    margin: 0.5em 0;
+    padding: 0;
+    font-size: 1em;
+}
+
+#menubar input::placeholder {
+    color: #666;
+}
+
+.title {
+    float: left;
+}
+
+.button {
+    float: left;
+    cursor: pointer;
+}
+
+.button i {
+    font-size: 1em;
+    display: block;
+    padding: 0.5em 0.2em;
+}
+
+.button + .button {
+    margin-left: 0.5em;
+}
+
+.button:hover {
+    background: #ccc;
+}
+
+
+.right {
+    float: right;
+}
+
+.help-text, .build-settings, .output-log {
+    display: none;
+    width: 100%;
+    flex-grow: 1;
+}
+
+p, .help-text ul, h2, h3 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+}
+
+
+h2 {
+    font-size: 1.2em;
+}
+
+.shown {
+    display: block;
+}
+
+.build-settings input {
+    font-family: monospace;
+}
+
+.build-settings>fieldset {
+    margin-bottom: 0.5em;
+}
+
+fieldset {
+    border: 1px solid black;
+}
+
+.button-focus {
+    background: #ddd;
+}
+
+.output-log {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
+    height: 100%;
+}
+
+.shown-log {
+    display: flex;
+}
+
+.outlog-code, .outlog-text {
+    font-family: monospace;
+    width: 100%;
+    box-sizing: border-box;
+    flex-grow: 1;
+    flex-basis: auto;
+}
