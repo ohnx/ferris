@@ -1,16 +1,27 @@
-:root {
-    --foreground-color: #000;
-    --full-background-color: #fff;
-    --background-color: #eee;
-    --background-1-color: #ddd;
-    --background-2-color: #ccc;
-    /* dark mode
-    --foreground-color: #fff;
-    --full-background-color: #000;
-    --background-color: #111;
-    --background-1-color: #222;
-    --background-2-color: #333; */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --foreground-color: #fff;
+        --full-background-color: #222;
+        --background-color: #222;
+        --background-1-color: #333;
+        --background-2-color: #444;
+    }
+    a, a:visited {
+        color: #00A4FB;
+    }
 }
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --foreground-color: #000;
+        --full-background-color: #fff;
+        --background-color: #eee;
+        --background-1-color: #ddd;
+        --background-2-color: #ccc;
+    }
+}
+
+
 
 html, body {
     margin: 0;
