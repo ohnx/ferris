@@ -15,7 +15,7 @@ function parseSlashedEdge(singlestr, newOkay) {
     // TODO: error out here
     if (newOkay) {
       // new thing okay
-      return {condition: '', output: []};
+      return {condition: singlestr, output: []};
     }
     return null;
   }
@@ -90,8 +90,9 @@ window.addEventListener('load', function() {
         // the logger to use
         logger: function(level, message) {
           console.log(`Log ${level}: ${message}`);
-          app.highrollerLog += `${message}\n`;
-          console.log(app.highrollerLog);
+          if (level > 0) {
+            app.highrollerLog += `${message}\n`;
+          }
         },
       },
       nodesize: 80,
@@ -258,20 +259,33 @@ window.addEventListener('load', function() {
         // TODO: store a lot more information in node/edge
         // this will be part of moore machine support task
         this.editingItem.type = itemType;
-        if (this.editingItem.type == 'node') {
-          this.editingItem.name = item.text;
-          this.editingItem.outputs = [];
+        console.log(item);
+        if ((item.condition || item.name) && (item.outputs != undefined)) {
+          // set parts per expected
+          this.editingItem.name = item.name;
+          this.editingItem.condition = item.condition;
+          this.editingItem.outputs = item.outputs;
         } else {
+          // legacy format where everything was just text
+          // update format
           let res = parseSlashedEdge(item.text, true);
+          console.log('parsed');
+          console.log(res);
+
+          this.editingItem.name = res.condition;
           this.editingItem.condition = res.condition;
           this.editingItem.outputs = res.output;
         }
+
         // TODO: add warnings
         this.editingItem.warnings = [];
 
         this.editingItem.valid = true;
+
+        // show property inspector
         if (this.sidebarItem != 'property-inspector') this.toggleShow('property-inspector');
         setTimeout(function() {
+          // focus the item
           if (this.editingItem.type == 'node') {
             this.$refs.nodenameentry.focus();
           } else {
@@ -288,9 +302,9 @@ window.addEventListener('load', function() {
         }
 
         if (this.editingItem.type == 'node') {
-          updateSelectedObject(this.editingItem.name);
+          updateSelectedObject(this.editingItem.name, null, this.editingItem.outputs);
         } else {
-          updateSelectedObject(`${this.editingItem.condition} / ${this.editingItem.outputs.join(', ')}`);
+          updateSelectedObject(null, this.editingItem.condition, this.editingItem.outputs);
         }
       }
     },
