@@ -28,6 +28,7 @@
         <li class="button right" v-bind:class="{ 'button-focus': sidebarItem == 'help-text' }" v-on:click="toggleShow('help-text')"><i title="toggle showing/hiding help information" class="icon-help"></i></li>
         <li class="button right" v-bind:class="{ 'button-focus': sidebarItem == 'build-settings' }" v-on:click="toggleShow('build-settings')"><i title="toggle showing/hiding build settings" class="icon-cog"></i></li>
         <li class="button right" v-bind:class="{ 'button-focus': sidebarItem == 'output-log' }" v-on:click="toggleShow('output-log')"><i title="toggle showing/hiding build log" class="icon-log"></i></li>
+        <li class="button right" v-bind:class="{ 'button-focus': sidebarItem == 'property-inspector' }" v-on:click="toggleShow('property-inspector')"><i title="edit properties of a state or transition in the diagram" class="icon-edit"></i></li>
       </ul>
       <div class="sidebar" v-bind:class="{ 'sidebar-open': sidebarShowing }">
         <div class="sidebar-content">
@@ -48,7 +49,7 @@
                 </li>
                 <li><b>Move something (edge (not its label) or state):</b> drag it around</li>
                 <li><b>Edit something (edge/label or state):</b> click on it</li>
-                <li><b>Stop editing something:</b> click away from it or press return/enter or escape</li>
+                <li><b>Stop editing something:</b> click away from it or press return/enter (commits changes) or escape (cancels changes)</li>
                 <li><b>Delete something:</b> click it and press the delete key (not the backspace key) or command+d on macOS</li>
                 <li><b>Move viewport:</b> click on canvas background and move mouse around</li>
                 <li><b>Zoom in/out:</b> scroll up/down while the mouse is over top of the canvas</li>
@@ -63,12 +64,14 @@
               <li><i class="icon-download"></i>: Save the current project onto your local computer. This file can then be opened on another computer or shared with others.
               It is recommended to download your project before closing out your browser, in case something happens to your user data.</li>
               <li><i class="icon-code"></i>: Build the FSM design into SystemVerilog code. Be sure to visit the settings panel first to ensure that everything is configured correctly. Clicking this button will also switch to displaying the output log.</li>
+              <li><i class="icon-edit"></i>: Display the property inspector panel, where you can modify the properties of states and transitions in the FSM diagram.</li>
               <li><i class="icon-log"></i>: Display output of the scripts run to convert the FSM into SystemVerilog code. The top box is for log messages (e.g. warnings), and the bottom box is for the output SystemVerilog code.</li>
               <li><i class="icon-cog"></i>: Display the configuration panel for the SystemVerilog conversion process. This is where you set up the width of input and output signals, clock name, and other important information that cannot be immediately inferred from the FSM diagram.</li>
               <li><i class="icon-help"></i>: Display this panel of helpful information!</li>
             </ul>
             <p>
               To trigger the behaviours specified above, you can either press the button or use the keybindings described below:
+              <br />
               All CTRL keybindings can also be used with the Meta (Command key on macOS) key.
             </p>
             <ul>
@@ -214,8 +217,51 @@
             <h2>Output Log</h2>
             <textarea class="outlog-text" disabled :value="highrollerLog" placeholder="error and warning log will go here"></textarea>
             <br />
-            <h2>Output Result</h2>
-            <textarea class="outlog-code" disabled :value="result" placeholder="Output results will go here, if successful"></textarea>
+            <h2>Output Result <button v-on:click="copyResult()">Copy</button></h2>
+            <textarea ref="outResultCode" class="outlog-code" disabled :value="result" placeholder="Output results will go here, if successful"></textarea>
+          </div>
+          <div class="property-inspector" v-bind:class="{ shown: sidebarItem == 'property-inspector' }">
+            <h2>Property inspector{{ editingItem.valid ? (editingItem.type == 'node' ? ': state' : ': transition') : '' }}</h2>
+            <div v-if="editingItem.valid">
+              <p>
+                Press enter while focused in a text box or the commit button to commit changes.
+                Press escape anywhere, the cancel button, or click any other item in the FSM to cancel changes.
+                Changes will not update the FSM until they are committed.
+              </p>
+              <div v-if="editingItem.type == 'node'">
+                <label for="nodename">Name:</label>
+                <input ref="nodenameentry" type="text" name="nodename" v-model="editingItem.name" v-on:keyup.enter="commitEditItem()">
+                <br />
+              </div>
+              <div v-if="editingItem.type == 'edge'">
+                <label for="edgecondition">Transition condition:</label>
+                <input ref="edgeconditionentry" type="text" name="edgecondition" v-model="editingItem.condition" v-on:keyup.enter="commitEditItem()">
+                <br />
+              </div>
+              <br />
+              <h3>Outputs</h3>
+              <button v-on:click="editingItem.outputs.push('')" tabindex="0">Add</button>
+              <br />
+              <div v-for="(output, index) of editingItem.outputs">
+                Output {{index}}: <input type="text" v-model="editingItem.outputs[index]" v-on:keyup.enter="commitEditItem()">
+                    <button v-on:click="editingItem.outputs.splice(index, 1)">Remove</button>
+              </div>
+              <br />
+              <div v-if="editingItem.warnings.length > 0">
+                <br />
+                <h3>Warnings</h3>
+                <ul>
+                  <li v-for="warning in editingItem.warnings">{{ warning }}</li>
+                </ul>
+              </div>
+              <button v-on:click="commitEditItem()" tabindex="0">Commit</button>
+              <br />
+              <br />
+              <button v-on:click="commitEditItem(true)" tabindex="0">Cancel</button>
+            </div>
+            <div v-else>
+              <p>Select an item in the FSM diagram to edit by clicking on it.</p>
+            </div>
           </div>
         </div>
       </div>

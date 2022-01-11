@@ -4,7 +4,8 @@
   "description": "part of the ferris package\nturns JSON representation of FSM into SystemVerilog code",
   "main": "src/index.js",
   "scripts": {
-    "test": "node tests/test2.js"
+    "test": "node tests/test2.js",
+    "test_validate": "node tests/test_validate.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/ohnx/ferris/issues"
   },
-  "homepage": "https://github.com/ohnx/ferris#readme"
+  "homepage": "https://github.com/ohnx/ferris#readme",
+  "dependencies": {
+    "jsep": "^1.2.0"
+  }
 }

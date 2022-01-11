@@ -1,7 +1,31 @@
 /* global Vue, nodeRadius, draw, exportJson, importJson, localStorage,
-   DEFAULT_SETUP, URL, Blob, crossBrowserKey */
+   DEFAULT_SETUP, URL, Blob, crossBrowserKey, updateSelectedObject */
 
 const LOCALSTORAGE_KEY = 'ferris_Last_User_Data';
+
+// returns map of {condition: 'asdf', output: ['a1', 'a2']}
+// may return null if error occurred
+// if newOkay is passed, then it will not return null, but instead return empty
+// condition w/ no output
+function parseSlashedEdge(singlestr, newOkay) {
+  let res = {};
+
+  let condOut = singlestr.split('/');
+  if (condOut.length != 2) {
+    // TODO: error out here
+    if (newOkay) {
+      // new thing okay
+      return {condition: '', output: []};
+    }
+    return null;
+  }
+
+  res.condition = condOut[0].split(' ').join('');
+  let outputVars = condOut[1].split(' ').join('');
+  res.output = outputVars.length > 0 ? outputVars.split(',') : [];
+
+  return res;
+}
 
 function convert(obj, meta) {
   let output = {};
@@ -30,14 +54,11 @@ function convert(obj, meta) {
       res.end = x.node;
     }
 
-    let condOut = x.text.split('/');
-    if (condOut.length != 2) {
-      // TODO: error out here
+    let tmp = parseSlashedEdge(x.text);
+    if (tmp) {
+      res.condition = tmp.condition;
+      res.output = tmp.output;
     }
-    res.condition = condOut[0].split(' ').join('');
-    let outputVars = condOut[1].split(' ').join('');
-    res.output = outputVars.length > 0 ? outputVars.split(',') : [];
-
     return res;
   }).filter(x => x);
 
@@ -51,7 +72,7 @@ window.addEventListener('load', function() {
     el: '#controller',
     data: {
       projectName: '',
-      sidebarShowing: true,
+      sidebarShowing: false,
       sidebarItem: 'build-settings',
       inputSignals: [],
       outputSignals: [],
@@ -76,15 +97,26 @@ window.addEventListener('load', function() {
       nodesize: 80,
       highrollerLog: '',
       result: '',
-      saveText: 'save current state in browser'
+      saveText: 'save current state in browser',
+      editingItem: {
+        valid: false,
+        type: '',
+        // only valid for nodes
+        name: '',
+        // only valid for edges
+        condition: '',
+        // valid for either one
+        outputs: [],
+        warnings: []
+      }
     },
     methods: {
       toggleShow: function(mode) {
-        if (!this.sidebarShowing) {
+        if (mode && !this.sidebarShowing) {
           // show the sidebar and this content
           this.sidebarShowing = true;
           this.sidebarItem = mode;
-        } else if (this.sidebarItem != mode) {
+        } else if (mode && this.sidebarItem != mode) {
           // switch to this
           this.sidebarItem = mode;
         } else {
@@ -121,6 +153,10 @@ window.addEventListener('load', function() {
         let verilogData = window.highroller.convert(convert(fsmData, meta), opts);
         this.result = verilogData;
         if (this.sidebarItem != 'output-log') this.toggleShow('output-log');
+      },
+      copyResult: function() {
+        this.$refs.outResultCode.select();
+        document.execCommand('copy', false);
       },
       openFile: function() {
         this.$refs.inputFile.click();
@@ -175,7 +211,6 @@ window.addEventListener('load', function() {
         this.updateProjectName();
         this.updateNodeSize();
       },
-      // TODO: also called periodically by other things
       saveState: function() {
         let exportedState = {};
         for (var key in DEFAULT_SETUP) {
@@ -217,6 +252,46 @@ window.addEventListener('load', function() {
           nodeRadius = this.nodesize;
           draw();
         }.bind(this), 10);
+      },
+      // riesenrad calls this function to start editing an item
+      editItem: function(itemType, item) {
+        // TODO: store a lot more information in node/edge
+        // this will be part of moore machine support task
+        this.editingItem.type = itemType;
+        if (this.editingItem.type == 'node') {
+          this.editingItem.name = item.text;
+          this.editingItem.outputs = [];
+        } else {
+          let res = parseSlashedEdge(item.text, true);
+          this.editingItem.condition = res.condition;
+          this.editingItem.outputs = res.output;
+        }
+        // TODO: add warnings
+        this.editingItem.warnings = [];
+
+        this.editingItem.valid = true;
+        if (this.sidebarItem != 'property-inspector') this.toggleShow('property-inspector');
+        setTimeout(function() {
+          if (this.editingItem.type == 'node') {
+            this.$refs.nodenameentry.focus();
+          } else {
+            this.$refs.edgeconditionentry.focus();
+          }
+        }.bind(this), 1);
+      },
+      // parameter true if discard changes
+      commitEditItem: function(discardChanges) {
+        // commit changes made
+        this.editingItem.valid = false;
+        if (discardChanges) {
+          return;
+        }
+
+        if (this.editingItem.type == 'node') {
+          updateSelectedObject(this.editingItem.name);
+        } else {
+          updateSelectedObject(`${this.editingItem.condition} / ${this.editingItem.outputs.join(', ')}`);
+        }
       }
     },
     created: function() {
