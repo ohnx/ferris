@@ -1,31 +1,8 @@
 /* global Vue, nodeRadius, draw, exportJson, importJson, localStorage,
-   DEFAULT_SETUP, URL, Blob, crossBrowserKey, updateSelectedObject */
+   DEFAULT_SETUP, URL, Blob, crossBrowserKey, updateSelectedObject,
+   clearErrors, addError */
 
 const LOCALSTORAGE_KEY = 'ferris_Last_User_Data';
-
-// returns map of {condition: 'asdf', output: ['a1', 'a2']}
-// may return null if error occurred
-// if newOkay is passed, then it will not return null, but instead return empty
-// condition w/ no output
-function parseSlashedEdge(singlestr, newOkay) {
-  let res = {};
-
-  let condOut = singlestr.split('/');
-  if (condOut.length != 2) {
-    // TODO: error out here
-    if (newOkay) {
-      // new thing okay
-      return {condition: singlestr, output: []};
-    }
-    return null;
-  }
-
-  res.condition = condOut[0].split(' ').join('');
-  let outputVars = condOut[1].split(' ').join('');
-  res.output = outputVars.length > 0 ? outputVars.split(',') : [];
-
-  return res;
-}
 
 function convert(obj, meta) {
   let output = {};
@@ -35,14 +12,16 @@ function convert(obj, meta) {
   output.machine.nodes = obj.nodes.map((x, i) => {
     return {
       id: i,
-      name: x.text
+      name: x.name,
+      output: x.outputs,
+      _parent: i
     };
   });
   output.machine.edges = obj.links.map((x, i) => {
     let res = {};
     if (x.type == 'StartLink') {
       if (output.meta.reset) {
-        // TODO: send message to user that we are overwriting the reset node
+        window.ferris.opts.logger(4, `Overwriting reset state to ${x.node} due to duplicate reset transitions`);
       }
       output.meta.reset = x.node;
       return;
@@ -54,15 +33,38 @@ function convert(obj, meta) {
       res.end = x.node;
     }
 
-    let tmp = parseSlashedEdge(x.text);
-    if (tmp) {
-      res.condition = tmp.condition;
-      res.output = tmp.output;
-    }
+    res.condition = x.condition;
+    res.output = x.outputs;
+    res._parent = i;
     return res;
   }).filter(x => x);
 
   return output;
+}
+
+function parseErrors(fsmData, metadataLog) {
+  // we know there is a 1 to 1 mapping for node/edge numbers
+  for (var i = 0; i < metadataLog.length; i++) {
+    let metadata = metadataLog[i].meta;
+    let msg = metadataLog[i].msg;
+    let metadataParts = metadata.split('.');
+    let nbr = metadata.length > 1 ? parseInt(metadataParts[0].substring(1), 10) : null;
+    let onbr = null;
+    if (metadataParts.length == 2 && metadataParts[1].length > 1) {
+      onbr = parseInt(metadataParts[1].substring(1), 10);
+    }
+
+    console.log('parsed out error #', nbr);
+    console.log(fsmData);
+
+    if (metadata[0] == 'e') {
+      // edge
+      addError('link', fsmData.edges[nbr]._parent, {message: msg, outputNumber: onbr});
+    } else if (metadata[0] == 'n') {
+      // node
+      addError('node', fsmData.nodes[nbr]._parent, {message: msg, outputNumber: onbr});
+    }
+  }
 }
 
 window.addEventListener('load', function() {
@@ -88,15 +90,21 @@ window.addEventListener('load', function() {
           skipOutputTransitionToSameState: true,
         },
         // the logger to use
-        logger: function(level, message) {
+        logger: function(level, message, metadata) {
           console.log(`Log ${level}: ${message}`);
           if (level > 0) {
             app.highrollerLog += `${message}\n`;
           }
-        },
+          if (metadata) {
+            for (var i = 0; i < metadata.length; i++) {
+              window.ferris.metadataLog.push({meta: metadata[i], msg: message});
+            }
+          }
+        }.bind(this),
       },
       nodesize: 80,
       highrollerLog: '',
+      metadataLog: [],
       result: '',
       saveText: 'save current state in browser',
       editingItem: {
@@ -108,7 +116,8 @@ window.addEventListener('load', function() {
         condition: '',
         // valid for either one
         outputs: [],
-        warnings: []
+        warnings: [],
+        badOutputs: []
       }
     },
     methods: {
@@ -141,6 +150,8 @@ window.addEventListener('load', function() {
       build: function() {
         this.highrollerLog = '';
         this.result = '';
+        this.metadataLog = [];
+        clearErrors();
         let meta = {
           name: this.projectName,
           signals: {
@@ -151,8 +162,14 @@ window.addEventListener('load', function() {
 
         let opts = this.opts;
         let fsmData = JSON.parse(exportJson());
-        let verilogData = window.highroller.convert(convert(fsmData, meta), opts);
+        let hrFsmData = convert(fsmData, meta);
+        let verilogData = window.highroller.convert(hrFsmData, opts);
         this.result = verilogData;
+
+        // parse out errors
+        parseErrors(hrFsmData.machine, this.metadataLog);
+        draw();
+
         if (this.sidebarItem != 'output-log') this.toggleShow('output-log');
       },
       copyResult: function() {
@@ -259,26 +276,18 @@ window.addEventListener('load', function() {
         // TODO: store a lot more information in node/edge
         // this will be part of moore machine support task
         this.editingItem.type = itemType;
-        console.log(item);
-        if ((item.condition || item.name) && (item.outputs != undefined)) {
-          // set parts per expected
-          this.editingItem.name = item.name;
-          this.editingItem.condition = item.condition;
-          this.editingItem.outputs = item.outputs;
-        } else {
-          // legacy format where everything was just text
-          // update format
-          let res = parseSlashedEdge(item.text, true);
-          console.log('parsed');
-          console.log(res);
 
-          this.editingItem.name = res.condition;
-          this.editingItem.condition = res.condition;
-          this.editingItem.outputs = res.output;
+        this.editingItem.name = item.name;
+        this.editingItem.condition = item.condition;
+        this.editingItem.outputs = item.outputs;
+        this.editingItem.warnings = item.errors;
+        this.editingItem.badOutputs = Array(item.outputs.length).fill(false);
+        console.log(item.errors);
+        for (var i = 0; i < item.errors.length; i++) {
+          if (item.errors[i].outputNumber != null) {
+            this.editingItem.badOutputs[item.errors[i].outputNumber] = true;
+          }
         }
-
-        // TODO: add warnings
-        this.editingItem.warnings = [];
 
         this.editingItem.valid = true;
 
@@ -306,6 +315,14 @@ window.addEventListener('load', function() {
         } else {
           updateSelectedObject(null, this.editingItem.condition, this.editingItem.outputs);
         }
+      },
+      propInspectRemoveOutput: function(index) {
+        this.editingItem.outputs.splice(index, 1);
+        this.editingItem.badOutputs.splice(index, 1);
+      },
+      propInspectAddOutput: function() {
+        this.editingItem.outputs.push('');
+        this.editingItem.badOutputs.push(false);
       }
     },
     created: function() {

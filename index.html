@@ -240,18 +240,18 @@
               </div>
               <br />
               <h3>Outputs</h3>
-              <button v-on:click="editingItem.outputs.push('')" tabindex="0">Add</button>
+              <button v-on:click="propInspectAddOutput()" tabindex="0">Add</button>
               <br />
-              <div v-for="(output, index) of editingItem.outputs">
+              <div v-for="(output, index) of editingItem.outputs" v-bind:class="{ hasError: editingItem.badOutputs[index] }">
                 Output {{index}}: <input type="text" v-model="editingItem.outputs[index]" v-on:keyup.enter="commitEditItem()">
-                    <button v-on:click="editingItem.outputs.splice(index, 1)">Remove</button>
+                    <button v-on:click="propInspectRemoveOutput(index)">Remove</button>
               </div>
               <br />
               <div v-if="editingItem.warnings.length > 0">
                 <br />
                 <h3>Warnings</h3>
                 <ul>
-                  <li v-for="warning in editingItem.warnings">{{ warning }}</li>
+                  <li v-for="warning in editingItem.warnings">{{ warning.message }}</li>
                 </ul>
               </div>
               <button v-on:click="commitEditItem()" tabindex="0">Commit</button>

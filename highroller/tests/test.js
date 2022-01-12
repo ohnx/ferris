@@ -1,16 +1,16 @@
 // the test object we will attempt to turn into SystemVerilog
 const TEST_OBJ = {
-  version: 2,
+  version: 3,
   machine: {
     nodes: [
-      // all nodes have an id and a name and that's it
-      {id: 1, name: "WAIT_READ"},
+      // all nodes have an id and a name, as well as an optional output
+      {id: 1, name: "WAIT_READ", output: ["buf_en"]},
       {id: 2, name: "WAIT_WRITE"},
       {id: 3, name: "WRITE_DELAY"},
       {id: 4, name: "WRITE0"},
       {id: 5, name: "WRITE1"},
       {id: 6, name: "WRITE2"},
-      {id: 7, name: "WRITE3"},
+      {id: 7, name: "WRITE3", output: ["buf_en"]},
       // id's don't have to be sequential
     ],
     edges: [
@@ -89,8 +89,13 @@ const TEST_OPTIONS = {
     skipOutputTransitionToSameState: true,
   },
   // the logger to use
-  logger: function(level, message) {
-    console.log(`Log ${level}: ${message}`);
+  logger: function(level, message, meta) {
+    // metadata format:
+    // node: nXXX
+    // edge: eXXX
+    // optionally: nXXX.oYYY or eXXX.oYYY for the YYYth (from 0) output of
+    // node/edge XXX
+    console.log(`Log ${level}: ${message} ${meta ? `(metadata: ${meta})` : ''}`);
   },
 };
 

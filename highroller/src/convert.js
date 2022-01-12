@@ -55,7 +55,7 @@ let make_nicer_fsm = function(fsm, opts) {
   // check that there are no floating nodes
   for (i = 0; i < nodeArr.length; i++) {
     if (nodeArr[i].targets == 0) {
-      opts.logger(LogLevel.WARNING, `Node ID ${nodeArr[i].id} has no edges going to it`);
+      opts.logger(LogLevel.WARNING, `Node ID ${nodeArr[i].id} has no edges going to it`, [`n${nodeArr[i].id}`]);
     }
   }
 
@@ -75,7 +75,7 @@ let make_nicer_fsm = function(fsm, opts) {
     var transitionConditions = nodeArr[i].edges.map(x => x.condition);
     var numUnconditionalTransitions = transitionConditions.reduce((prev, curr) => {prev + (curr ? 1 : 0)}, 0);
     if (numUnconditionalTransitions > 1) {
-      opts.logger(LogLevel.ERROR, `Node ID ${nodeArr[i].id} has multiple unconditional transitions going out of it!`);
+      opts.logger(LogLevel.ERROR, `Node ID ${nodeArr[i].id} has multiple unconditional transitions going out of it!`, [`n${nodeArr[i].id}`]);
     }
   }
 
@@ -109,10 +109,14 @@ let make_nicer_signals = function(fsm, opts) {
     }
   }
 
-  // validation - check to make sure all edges' outputs are only this
-  for (i = 0; i < fsm.machine.edges.length; i++) {
-    for (var j = 0; j < fsm.machine.edges[i].output.length; j++) {
-      var checkStr = fsm.machine.edges[i].output[j].split("=");
+  var checkStr;
+
+  // validation - check to make sure all nodes' outputs are only of the known set
+  for (i = 0; i < fsm.machine.nodes.length; i++) {
+    // no outputs
+    if (!fsm.machine.nodes[i].output) continue;
+    for (var j = 0; j < fsm.machine.nodes[i].output.length; j++) {
+      checkStr = fsm.machine.nodes[i].output[j].split("=");
       if (checkStr.length == 2) {
         // had equals sign, so there might be spaces after. strip them off.
         checkStr = checkStr[0].split(" ").join("");
@@ -120,13 +124,35 @@ let make_nicer_signals = function(fsm, opts) {
         checkStr = checkStr[0];
       } else {
         // error
-        opts.logger(LogLevel.ERROR, `Bad output \`${fsm.machine.edges[i].output[j]}\` in edge #${i} output #${j}`);
+        opts.logger(LogLevel.ERROR, `Bad output \`${fsm.machine.nodes[i].output[j]}\` in node #${i} output #${j}`, [`n${i}.o${j}`]);
         return;
       }
 
       // check that this signal exists
       if (!signalMap.hasOwnProperty(checkStr)) {
-        opts.logger(LogLevel.WARNING, `Edge #${i} output #${j} is not a valid output!`);
+        opts.logger(LogLevel.WARNING, `Node #${i} output #${j} is not a valid output!`, [`n${i}.o${j}`]);
+      }
+    }
+  }
+
+  // validation - check to make sure all edges' outputs are only this
+  for (i = 0; i < fsm.machine.edges.length; i++) {
+    for (var j = 0; j < fsm.machine.edges[i].output.length; j++) {
+      checkStr = fsm.machine.edges[i].output[j].split("=");
+      if (checkStr.length == 2) {
+        // had equals sign, so there might be spaces after. strip them off.
+        checkStr = checkStr[0].split(" ").join("");
+      } else if (checkStr.length == 1) {
+        checkStr = checkStr[0];
+      } else {
+        // error
+        opts.logger(LogLevel.ERROR, `Bad output \`${fsm.machine.edges[i].output[j]}\` in edge #${i} output #${j}`, [`e${i}.o${j}`]);
+        return;
+      }
+
+      // check that this signal exists
+      if (!signalMap.hasOwnProperty(checkStr)) {
+        opts.logger(LogLevel.WARNING, `Edge #${i} output #${j} is not a valid output!`, [`e${i}.o${j}`]);
       }
     }
   }
@@ -142,8 +168,8 @@ exports.convert = function(fsm, opts) {
   let niceFsm;
   let niceSignals;
 
-  if (fsm.version != 2) {
-    opts.logger(LogLevel.FATAL, `Expected version 2, not ${fsm.version}`);
+  if (fsm.version != 2 && fsm.version != 3) {
+    opts.logger(LogLevel.FATAL, `Expected version 2 or 3, not ${fsm.version}`);
     return;
   }
 
@@ -242,7 +268,7 @@ exports.convert = function(fsm, opts) {
 
   let format_single_output = function(outputSignal, value) {
     if (value) {
-      let val_str = isNaN(parseInt(value)) ? value : `${niceSignals[outputSignal].width}'d${value}`;
+      let val_str = isNaN(parseInt(value, 10)) ? value : `${niceSignals[outputSignal].width}'d${value}`;
       emit_line(0, `${outputSignal} = ${val_str};`);
     } else {
       if (niceSignals.hasOwnProperty(outputSignal))
@@ -267,6 +293,11 @@ exports.convert = function(fsm, opts) {
 
   let gen_case_item = function(state) {
     emit_line(1, `${state.name}: begin`);
+
+    // state outputs go first
+    if (state.output) {
+      format_outputs(state.output);
+    }
 
     for (var i = 0; i < state.edges.length; i++) {
       var currEdge = state.edges[i];

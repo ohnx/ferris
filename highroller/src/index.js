@@ -1,3 +1,4 @@
 exports.convert = require('./convert').convert;
-const validate = require('./validate');
-exports.parseEdge = validate.parseEdge;
+// still in development
+// const validate = require('./validate');
+// exports.parseEdge = validate.parseEdge;

@@ -4,7 +4,7 @@
   "description": "part of the ferris package\nturns JSON representation of FSM into SystemVerilog code",
   "main": "src/index.js",
   "scripts": {
-    "test": "node tests/test2.js",
+    "test": "node tests/test.js",
     "test_validate": "node tests/test_validate.js"
   },
   "repository": {

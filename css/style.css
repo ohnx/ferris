@@ -21,8 +21,6 @@
     }
 }
 
-
-
 html, body {
     margin: 0;
     padding: 0;
@@ -193,4 +191,12 @@ fieldset {
     box-sizing: border-box;
     flex-grow: 1;
     flex-basis: auto;
+}
+
+.hasError {
+    color: #dc3545;
+}
+
+.hasError input {
+    color: #dc3545;
 }
