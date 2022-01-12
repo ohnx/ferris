@@ -49,7 +49,7 @@
                 </li>
                 <li><b>Move something (edge (not its label) or state):</b> drag it around</li>
                 <li><b>Edit something (edge/label or state):</b> click on it</li>
-                <li><b>Stop editing something:</b> click away from it or press return/enter (commits changes) or escape (cancels changes)</li>
+                <li><b>Stop editing something:</b> press return/enter (commits changes) or escape (cancels changes)</li>
                 <li><b>Delete something:</b> click it and press the delete key (not the backspace key) or command+d on macOS</li>
                 <li><b>Move viewport:</b> click on canvas background and move mouse around</li>
                 <li><b>Zoom in/out:</b> scroll up/down while the mouse is over top of the canvas</li>
@@ -70,7 +70,7 @@
               <li><i class="icon-help"></i>: Display this panel of helpful information!</li>
             </ul>
             <p>
-              To trigger the behaviours specified above, you can either press the button or use the keybindings described below:
+              To trigger the behaviours specified above, you can either click the icon or use the keybindings described below:
               <br />
               All CTRL keybindings can also be used with the Meta (Command key on macOS) key.
             </p>
@@ -87,6 +87,13 @@
             <p>
               <b>Important notes:</b>
               Active low signals are not supported in the input.
+            </p>
+            <p>
+              <b>Usage:</b>
+              Configure all of the settings in the <i class="icon-cog"></i> panel.
+              Each setting has accompanying explanation text.
+              Once done, click the Build button at the bottom of the settings panel or
+              the <i class="icon-code"></i> in the menu bar, or press control/command+B to trigger a build.
             </p>
             <br />
             <h2>Thanks and Attributions</h2>
@@ -161,7 +168,8 @@
             <fieldset>
               <legend>Output signals</legend>
               These settings are used to validate the FSM outputs described in the diagram,
-              as well as to generate the module header.<br /><br />
+              as well as to generate the module header. If there is an output in the diagram
+              but not in this list, an error will be produced.<br /><br />
 
               <div v-for="(signal, index) of outputSignals">
                 <fieldset>
