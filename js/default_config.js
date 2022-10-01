@@ -4,20 +4,11 @@ const DEFAULT_SETUP = {
   "sidebarItem": "help-text",
   "inputSignals": [
     {
-      "name": "fifo_empty",
-      "width": 1
-    },
-    {
-      "name": "free_outbound",
+      "name": "buf_empty",
       "width": 1
     }
   ],
   "outputSignals": [
-    {
-      "name": "fifo_read",
-      "width": 1,
-      "inverted": false
-    },
     {
       "name": "buf_en",
       "width": 1,
@@ -25,10 +16,11 @@ const DEFAULT_SETUP = {
     },
     {
       "name": "sel",
-      "width": 2
+      "width": 2,
+      "default": "0"
     },
     {
-      "name": "put_outbound",
+      "name": "writing",
       "width": 1,
       "inverted": false
     }
@@ -56,76 +48,109 @@ const DEFAULT_SETUP = {
       {
         "x": -180,
         "y": -61,
-        "text": "WAIT_READ"
+        "name": "INITIAL",
+        "outputs": []
       },
       {
-        "x": 376,
-        "y": 47,
-        "text": "WAIT_WRITE"
+        "x": 556.6518706404567,
+        "y": 25.25364616360179,
+        "name": "WRITE1",
+        "outputs": []
       },
       {
-        "x": 770,
-        "y": 100,
-        "text": "WRITE_DELAY"
-      },
-      {
-        "x": 945,
-        "y": 349,
-        "text": "WRITE0"
-      },
-      {
-        "x": 596,
-        "y": 515,
-        "text": "WRITE1"
-      },
-      {
-        "x": 145,
-        "y": 486,
-        "text": "WRITE2"
+        "x": 412.2637920101458,
+        "y": 360.06467977171843,
+        "name": "WRITE2",
+        "outputs": []
       },
       {
         "x": -67,
         "y": 306,
-        "text": "WRITE3"
+        "name": "WRITE3",
+        "outputs": []
+      },
+      {
+        "x": 203.2894736842105,
+        "y": -99.34210526315788,
+        "name": "WAIT_WRITE",
+        "outputs": []
       }
     ],
     "links": [
       {
         "type": "StartLink",
         "node": 0,
-        "text": "",
         "deltaX": -166,
         "deltaY": -98
       },
       {
         "type": "Link",
-        "nodeA": 0,
-        "nodeB": 1,
-        "text": "~fifo_empty / buf_en, fifo_read",
+        "nodeA": 2,
+        "nodeB": 3,
+        "condition": "",
+        "outputs": [
+          "writing",
+          "sel=3"
+        ],
         "lineAngleAdjust": 0,
         "parallelPart": 0.5,
         "perpendicularPart": -30
+      },
+      {
+        "type": "Link",
+        "nodeA": 3,
+        "nodeB": 0,
+        "condition": "buf_empty",
+        "outputs": [
+          "buf_en"
+        ],
+        "lineAngleAdjust": 0,
+        "parallelPart": 0.21844676376708133,
+        "perpendicularPart": -86.22993103108988
+      },
+      {
+        "type": "SelfLink",
+        "node": 0,
+        "condition": "buf_empty",
+        "outputs": [
+          "buf_en"
+        ],
+        "anchorAngle": 0.6590195522539115
       },
       {
         "type": "Link",
         "nodeA": 1,
         "nodeB": 2,
-        "text": "free_outbound /",
+        "condition": "",
+        "outputs": [
+          "writing",
+          "sel=2"
+        ],
         "lineAngleAdjust": 0,
         "parallelPart": 0.5,
         "perpendicularPart": -30
       },
       {
-        "type": "SelfLink",
-        "node": 1,
-        "text": "~free_outbound /",
-        "anchorAngle": 1.0906212971913698
+        "type": "Link",
+        "nodeA": 4,
+        "nodeB": 1,
+        "condition": "",
+        "outputs": [
+          "writing",
+          "sel=1"
+        ],
+        "lineAngleAdjust": 0,
+        "parallelPart": 0.5904387207467147,
+        "perpendicularPart": -33.20890830413306
       },
       {
         "type": "Link",
-        "nodeA": 2,
-        "nodeB": 3,
-        "text": "/ put_outbound, sel=0",
+        "nodeA": 0,
+        "nodeB": 4,
+        "condition": "~buf_empty",
+        "outputs": [
+          "buf_en"
+        ],
         "lineAngleAdjust": 0,
         "parallelPart": 0.5,
         "perpendicularPart": -30
@@ -134,58 +159,19 @@ const DEFAULT_SETUP = {
         "type": "Link",
         "nodeA": 3,
         "nodeB": 4,
-        "text": "/ put_outbound, sel = 1",
+        "condition": "~buf_empty",
+        "outputs": [
+          "buf_en"
+        ],
         "lineAngleAdjust": 0,
-        "parallelPart": 0.5,
-        "perpendicularPart": -30
-      },
-      {
-        "type": "Link",
-        "nodeA": 4,
-        "nodeB": 5,
-        "text": "/ put_outbound, sel = 2",
-        "lineAngleAdjust": 0,
-        "parallelPart": 0.5,
-        "perpendicularPart": -30
-      },
-      {
-        "type": "Link",
-        "nodeA": 5,
-        "nodeB": 6,
-        "text": "/ put_outbound, sel = 3",
-        "lineAngleAdjust": 0,
-        "parallelPart": 0.5,
-        "perpendicularPart": -30
-      },
-      {
-        "type": "Link",
-        "nodeA": 6,
-        "nodeB": 1,
-        "text": "~fifo_empty / buf_en, fifo_read",
-        "lineAngleAdjust": 0,
-        "parallelPart": 0.5,
-        "perpendicularPart": -30
-      },
-      {
-        "type": "Link",
-        "nodeA": 6,
-        "nodeB": 0,
-        "text": "fifo_empty / buf_en",
-        "lineAngleAdjust": 0,
-        "parallelPart": 0.44757699290088065,
-        "perpendicularPart": -114.19225498181136
-      },
-      {
-        "type": "SelfLink",
-        "node": 0,
-        "text": "fifo_empty / buf_en",
-        "anchorAngle": 0.9048270894157867
+        "parallelPart": 0.6741808835905673,
+        "perpendicularPart": 86.87101966944181
       }
     ],
-    "scale": 0.8200000000000003,
+    "scale": 0.7600000000000001,
     "position": {
-      "x": 455,
-      "y": 335
+      "x": 438,
+      "y": 369
     }
   }
 };
